@@ -1,0 +1,66 @@
+#########################################################################################
+# This yaml is to convert the console route to using Istio Ingress with Istio API
+#########################################################################################
+apiVersion: ingress.operator.openshift.io/v1
+kind: DNSRecord
+metadata:
+  name: istio-console
+  namespace: openshift-ingress-operator
+  labels:
+    ingresscontroller.operator.openshift.io/owning-ingresscontroller: default
+spec:
+  dnsName: "${CONSOLE_ROUTE}."
+  recordTTL: 30
+  recordType: ${DNS_RECORD_TYPE}
+  targets:
+  - ${INGRESS_HOST}
+---
+# Create the ingress gateway
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: console-gateway
+  namespace: istioapi
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      # TRICKY: Cert can only be in istio-system namespace!
+      credentialName: default-credential
+    hosts:
+    - "${CONSOLE_ROUTE}"
+---
+# Create virtual service for console route
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: console
+  namespace: istioapi
+spec:
+  hosts:
+  - ${CONSOLE_ROUTE}
+  gateways:
+  - console-gateway
+  http:
+  - route:
+    - destination:
+        port:
+          number: 443
+        host: console.openshift-console.svc.cluster.local
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: console-istioapi
+  namespace: openshift-console
+spec:
+  host: console.openshift-console.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE

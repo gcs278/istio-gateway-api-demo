@@ -1,0 +1,281 @@
+######################################################################
+# Envoy Ingress with Istio API
+######################################################################
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: istio-cni
+  namespace: istioapi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istioapi
+  namespace: istioapi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: istioapi
+  name: nginx
+  labels:
+    app: nginx
+    service: nginx
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 80
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: istioapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: nginx
+        version: v1
+    spec:
+      serviceAccountName: istioapi
+      containers:
+      - image: quay.io/gspence/nginx
+        imagePullPolicy: Always
+        name: nginx
+        ports:
+        - containerPort: 80
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: http-gateway
+  namespace: istioapi
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "http.${ISTIO_DOMAIN}"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: http
+  namespace: istioapi
+spec:
+  hosts:
+  - "http.${ISTIO_DOMAIN}"
+  gateways:
+  - http-gateway
+  http:
+  - route:
+    - destination:
+        port:
+          number: 8000
+        host: nginx.istioapi.svc.cluster.local
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: edge-gateway
+  namespace: istioapi
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      # TRICKY: Cert can only be in istio-system namespace!
+      credentialName: edge-credential
+    hosts:
+    - "edge.${ISTIO_DOMAIN}"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: edge
+  namespace: istioapi
+spec:
+  hosts:
+  - "edge.${ISTIO_DOMAIN}"
+  gateways:
+  - edge-gateway
+  http:
+  - route:
+    - destination:
+        port:
+          number: 8000
+        host: nginx.istioapi.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: istioapi
+  name: nginx-reencrypt
+  labels:
+    app: nginx-ssl
+    service: nginx-ssl
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: 443
+  selector:
+    app: nginx-ssl
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: istioapi
+  name: nginx-pass
+  labels:
+    app: nginx-ssl
+    service: nginx-ssl
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: 443
+  selector:
+    app: nginx-ssl
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ssl
+  namespace: istioapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-ssl
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: nginx-ssl
+        version: v1
+    spec:
+      serviceAccountName: istioapi
+      containers:
+      - image: quay.io/gspence/nginx-ssl
+        imagePullPolicy: Always
+        name: nginx-ssl
+        ports:
+        - containerPort: 443
+        volumeMounts:
+        - name: cert
+          mountPath: /etc/nginx/certs
+      volumes:
+      - name: cert
+        secret:
+          secretName: pass-credential
+          items:
+          - key: tls.crt
+            path: server.crt
+          - key: tls.key
+            path: server.key
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: reencrypt-gateway
+  namespace: istioapi
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      # TRICKY: Cert can only be in istio-system namespace!
+      credentialName: re-credential
+    hosts:
+    - "re.${ISTIO_DOMAIN}"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: reencrypt
+  namespace: istioapi
+spec:
+  hosts:
+  - "re.${ISTIO_DOMAIN}"
+  gateways:
+  - reencrypt-gateway
+  http:
+  - route:
+    - destination:
+        port:
+          number: 8443
+        host: nginx-reencrypt.istioapi.svc.cluster.local
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: reencrypt
+  namespace: istioapi
+spec:
+  host: nginx-reencrypt.istioapi.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: passthrough-gateway
+  namespace: istioapi
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: PASSTHROUGH
+    hosts:
+    - "pass.${ISTIO_DOMAIN}"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: passthrough
+  namespace: istioapi
+spec:
+  hosts:
+  - "pass.${ISTIO_DOMAIN}"
+  gateways:
+  - passthrough-gateway
+  tls:
+  - match:
+    - port: 443
+      sniHosts:
+      - "pass.${ISTIO_DOMAIN}"
+    route:
+    - destination:
+        port:
+          number: 8443
+        host: nginx-pass.istioapi.svc.cluster.local

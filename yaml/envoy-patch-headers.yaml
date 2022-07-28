@@ -1,0 +1,61 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: lua-filter
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+       name: envoy.lua
+       typed_config:
+         "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+         inlineCode: |
+            function envoy_on_response(response_handle)
+                response_handle:logInfo(" ========= OpenshiftDemo! =========="); 
+                response_handle:headers():add("OpenshiftDemo", "IstioAPI-ItWorked.jpeg");
+            end 
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: lua-filter
+  namespace: gwapi
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+       name: envoy.lua
+       typed_config:
+         "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+         inlineCode: |
+            function envoy_on_response(response_handle)
+                response_handle:logInfo(" ========= OpenshiftDemo! =========="); 
+                response_handle:headers():add("OpenshiftDemo", "IstioAPI-ItWorked.jpeg");
+            end 
