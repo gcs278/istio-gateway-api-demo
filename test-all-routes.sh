@@ -1,4 +1,4 @@
-#!/bin/bash 
+#! /usr/bin/env bash
 
 hosts_gwapi="$(oc get httproute -n gwapi --no-headers -o custom-columns="route:.spec.hostnames[0]") $(oc get tlsroute -n gwapi --no-headers -o custom-columns="route:.spec.hostnames[0]")"
 hosts_istio="$(oc get VirtualService -n istioapi --no-headers -o custom-columns="route:.spec.hosts[0]")"

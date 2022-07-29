@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
 kill $(lsof -i :15000 | tail -1 | awk '{print $2}') &> /dev/null
 POD=$(oc get -n istio-system pod --no-headers | grep istio-ingressgateway | awk '{print $1}')

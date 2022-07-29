@@ -1,9 +1,13 @@
-#!/bin/bash
+#! /usr/bin/env bash
+
+set -u
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
 YAML_DIR=${SCRIPT_DIR}/../yaml
 CERT_DIR=/tmp/istio-certs
 mkdir -p $CERT_DIR
+
+: "${ISTIO_BM:=""}"
 
 function create_certs() {
   TYPE="$1"
@@ -68,13 +72,13 @@ oc create namespace istioapi --dry-run=client -o yaml | oc apply -f -
 oc create namespace gwapi  --dry-run=client -o yaml | oc apply --overwrite=true -f -
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:istioapi
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:gwapi
-oc create -n gwapi serviceaccount istio-ingressgateway-service-account
+oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run=client -o yaml | oc apply -f -
 oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
 
 GWAPI_SERVICE="gateway"
-if [[ "$GW_MANUAL_DEPLOYMENT" == "true" ]]; then
+if [[ "${GW_MANUAL_DEPLOYMENT:=}" == "true" ]]; then
   echo "GW_MANUAL_DEPLOYMENT is set. Using manual deployment for GWAPI"
-  if [[ "$GW_HOST_NETWORKING" == "true" ]]; then
+  if [[ "${GW_HOST_NETWORKING:=}" == "true" ]]; then
     echo "GW_HOST_NETWORKING is set. Using host networking for GWAPI"
     export GW_HOST_NETWORKING_YAML=$(cat <<-END
         ports:
@@ -135,6 +139,8 @@ fi
 
 
 if [[ "$ISTIO_BM" != "true" ]]; then
+  : "${GWAPI_LOADBALANCER_DOMAIN:=""}"
+  : "${GWAPI_LOADBALANCER_IP:=""}"
   TIMEOUT=60
   while [[ "$GWAPI_LOADBALANCER_DOMAIN" == "" ]] && [[ "$GWAPI_LOADBALANCER_IP" == "" ]]; do
     # For AWS, it uses hostname, but for GCE, it uses IP
