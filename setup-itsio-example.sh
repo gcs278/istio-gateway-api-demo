@@ -13,7 +13,7 @@ rm -rf /tmp/istio-certs
 # Configure nginx examples
 ${HELPER}/create-nginx-examples.sh "$@"
 
-if [[ "$ISTIO_BM" != "true" ]]; then
+if [[ "${ISTIO_BM:=}" != "true" ]] && [[ "${ISTIO_CONVERT_CONSOLE:=}" == "true" ]]; then
   # Convert the console route to istio ingress
   ${HELPER}/convert-console-route.sh
 fi

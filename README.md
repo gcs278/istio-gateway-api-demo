@@ -27,6 +27,7 @@ Istio Ingress should now be operational with your cluster
 - **GW_MANUAL_DEPLOYMENT**: If true, then a single deployment will be created by these scrpits instead of allowing istiod to auto create it. This changes the architecture from one-to-one gateway to deployment to many-to-one gateways to our manual deployment. This is more aligned with openshift-router architecture.
 - **GW_HOST_NETWORKING**: If true, then Gateway API implementation will use host networking. Requires `GW_MANUAL_DEPLOYMENT` to be true
 - **ISTIO_BM**: If true, then setup will use baremetal configurations.
+- **ISTIO_CONVERT_CONSOLE**: If true, then scripts will convert the console route to Istio Gateway using Istio API.
 
 # Debugging Tools in `./debug-scripts`
 - `dump-envoy-config-istioapi.sh` & `dump-envoy-config-gwapi.sh`
