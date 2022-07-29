@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 
+set -eu
+
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
 YAML_DIR=${SCRIPT_DIR}/../yaml
 CERT_DIR=/tmp/istio-certs
@@ -72,7 +74,7 @@ oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run
 oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
 
 GWAPI_SERVICE="gateway"
-if [[ "$GW_MANUAL_DEPLOYMENT" == "true" ]]; then
+if [[ "${GW_MANUAL_DEPLOYMENT:=}" == "true" ]]; then
   echo "GW_MANUAL_DEPLOYMENT is set. Using manual deployment for GWAPI"
   if [[ "$GW_HOST_NETWORKING" == "true" ]]; then
     echo "GW_HOST_NETWORKING is set. Using host networking for GWAPI"
