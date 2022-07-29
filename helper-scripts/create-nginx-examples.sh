@@ -7,6 +7,8 @@ YAML_DIR=${SCRIPT_DIR}/../yaml
 CERT_DIR=/tmp/istio-certs
 mkdir -p $CERT_DIR
 
+: "${ISTIO_BM:=""}"
+
 function create_certs() {
   TYPE="$1"
   CERT_DOMAIN="$2"
