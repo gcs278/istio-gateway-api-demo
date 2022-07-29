@@ -68,7 +68,7 @@ oc create namespace istioapi --dry-run=client -o yaml | oc apply -f -
 oc create namespace gwapi  --dry-run=client -o yaml | oc apply --overwrite=true -f -
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:istioapi
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:gwapi
-oc create -n gwapi serviceaccount istio-ingressgateway-service-account
+oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run=client -o yaml | oc apply -f -
 oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
 
 GWAPI_SERVICE="gateway"
