@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-set -eu
+set -u
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
 YAML_DIR=${SCRIPT_DIR}/../yaml
