@@ -2,6 +2,9 @@
 
 set -eu
 
+DOWNLOAD_DIR="/tmp/istio-download"
+PATH="$DOWNLOAD_DIR/bin:$PATH"
+
 if ! command -v istioctl &> /dev/null; then
     echo "istioctl not found"
     exit 2

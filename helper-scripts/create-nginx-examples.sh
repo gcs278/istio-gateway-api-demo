@@ -78,7 +78,7 @@ oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-servic
 GWAPI_SERVICE="gateway"
 if [[ "${GW_MANUAL_DEPLOYMENT:=}" == "true" ]]; then
   echo "GW_MANUAL_DEPLOYMENT is set. Using manual deployment for GWAPI"
-  if [[ "$GW_HOST_NETWORKING" == "true" ]]; then
+  if [[ "${GW_HOST_NETWORKING:=}" == "true" ]]; then
     echo "GW_HOST_NETWORKING is set. Using host networking for GWAPI"
     export GW_HOST_NETWORKING_YAML=$(cat <<-END
         ports:
@@ -139,6 +139,8 @@ fi
 
 
 if [[ "$ISTIO_BM" != "true" ]]; then
+  : "${GWAPI_LOADBALANCER_DOMAIN:=""}"
+  : "${GWAPI_LOADBALANCER_IP:=""}"
   TIMEOUT=60
   while [[ "$GWAPI_LOADBALANCER_DOMAIN" == "" ]] && [[ "$GWAPI_LOADBALANCER_IP" == "" ]]; do
     # For AWS, it uses hostname, but for GCE, it uses IP

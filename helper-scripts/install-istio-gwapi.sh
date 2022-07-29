@@ -19,7 +19,7 @@ oc adm policy add-scc-to-user privileged -n istio-system -z istio-ingressgateway
 
 if [[ ! -x "$DOWNLOAD_DIR/bin/istioctl" ]]; then
     echo "Downloading and extracting $ISTIO_RELEASE"
-    curl -Ls -o istio.tar.gz --output-dir "$DOWNLOAD_DIR" "$ISTIO_RELEASE"
+    curl -Ls -o "${DOWNLOAD_DIR}/istio.tar.gz" "$ISTIO_RELEASE"
     tar -C "$DOWNLOAD_DIR" --strip-components=1 -xvpf "$DOWNLOAD_DIR/istio.tar.gz"
 fi
 
@@ -36,10 +36,6 @@ fi
 
 # Install Istio for openshift
 istioctl install -y --set profile=openshift --set meshConfig.accessLogFile=/dev/stdout ${hostNetArg:-}
-
-# Expose openshift route for istio
-# Not really needed, since we make our own DNS records to circumvent openshift-router
-oc -n istio-system expose svc/istio-ingressgateway --port=http2
 
 # Install gateway api
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.0" | kubectl apply -f -; }
