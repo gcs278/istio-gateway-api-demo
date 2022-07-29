@@ -1,15 +1,17 @@
 #!/bin/bash
 
+set -eu
+
 HELPER="./helper-scripts"
 
 # Install Istio and Gateway API
-${HELPER}/install-istio-gwapi.sh $@
+${HELPER}/install-istio-gwapi.sh "$@"
 
 # Clear certs for new installation
 rm -rf /tmp/istio-certs
 
 # Configure nginx examples
-${HELPER}/create-nginx-examples.sh $@
+${HELPER}/create-nginx-examples.sh "$@"
 
 if [[ "$ISTIO_BM" != "true" ]]; then
   # Convert the console route to istio ingress
