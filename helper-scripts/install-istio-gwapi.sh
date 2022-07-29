@@ -28,6 +28,7 @@ fi
 
 PATH="$DOWNLOAD_DIR/bin:$PATH"
 
+hostNetArg=""
 if [[ "$ISTIO_HOST_NETWORKING" == "true" ]]; then
   hostNetArg="-f $thisdir/../yaml/hostnet-overlay.yaml"
 fi
