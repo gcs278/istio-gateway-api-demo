@@ -9,6 +9,7 @@ DOWNLOAD_DIR="/tmp/istio-download"
 mkdir -p "$DOWNLOAD_DIR"
 
 # Must do this for openshift to allow istio to work
+oc create namespace istio-system --dry-run=client -o yaml | oc apply -f -
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:istio-system
 oc adm policy add-scc-to-user privileged -n istio-system -z istio-ingressgateway-service-account
 
