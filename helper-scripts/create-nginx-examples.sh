@@ -8,6 +8,7 @@ CERT_DIR=/tmp/istio-certs
 mkdir -p $CERT_DIR
 
 : "${ISTIO_BM:=""}"
+: "${ISTIO_API_DEMO:=""}"
 
 function create_certs() {
   TYPE="$1"
@@ -27,7 +28,7 @@ function create_certs() {
   oc create -n $NAMESPACE secret tls ${TYPE}-credential --key=${CERT_DIR}/${TYPE}.${NAMESPACE}.key --cert=${CERT_DIR}/${TYPE}.${NAMESPACE}.crt
 }
 
-if [[ "$ISTIO_BM" == "true" ]]; then
+if [[ "${ISTIO_API_DEMO}" != "true" ]] || [[ "$ISTIO_BM" == "true" ]]; then
   DOMAIN="$(oc get ingresses.config/cluster -o jsonpath={.spec.domain})"
   export ISTIO_DOMAIN="istio.${DOMAIN:5}"
   export GWAPI_DOMAIN="gwapi.${DOMAIN:5}"
@@ -68,14 +69,17 @@ EOF
 fi
 
 # Create namespaces
-oc create namespace istioapi --dry-run=client -o yaml | oc apply -f -
+if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
+  oc create namespace istioapi --dry-run=client -o yaml | oc apply -f -
+  oc adm policy add-scc-to-group anyuid system:serviceaccounts:istioapi
+fi
 oc create namespace gwapi  --dry-run=client -o yaml | oc apply --overwrite=true -f -
-oc adm policy add-scc-to-group anyuid system:serviceaccounts:istioapi
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:gwapi
 oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run=client -o yaml | oc apply -f -
 oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
 
 GWAPI_SERVICE="gateway"
+GWAPI_SERVICE_NAMESPACE="gwapi"
 if [[ "${GW_MANUAL_DEPLOYMENT:=}" == "true" ]]; then
   echo "GW_MANUAL_DEPLOYMENT is set. Using manual deployment for GWAPI"
   if [[ "${GW_HOST_NETWORKING:=}" == "true" ]]; then
@@ -105,14 +109,29 @@ END
 )
 fi
 
+if [[ "${ISTIO_OSSM}" == "true" ]] && [[ "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT=}" == "true" ]]; then
+  # This points the demo Gateway Object to use the default istiod created deployment
+  export GW_ADDRESSES_YAML=$(cat <<-END
+addresses:
+  - value: istio-ingressgateway.gwapi.svc.cluster.local
+    type: Hostname
+END
+)
+  # This is for the DNS Records to point to our Default Envoy Deployment Service
+  GWAPI_SERVICE="istio-ingressgateway"
+  GWAPI_SERVICE_NAMESPACE="gwapi"
+fi
+
 # Set up certs
 # Create CA
 test -f ${CERT_DIR}/ca.crt || openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=RedHat/CN=${ISTIO_DOMAIN}' -keyout ${CERT_DIR}/ca.key -out ${CERT_DIR}/ca.crt
 
 # Istio API Certs
-create_certs edge "edge.${ISTIO_DOMAIN}" istio-system
-create_certs re "re.${ISTIO_DOMAIN}" istio-system
-create_certs pass "pass.${ISTIO_DOMAIN}" istioapi
+if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
+  create_certs edge "edge.${ISTIO_DOMAIN}" istio-system
+  create_certs re "re.${ISTIO_DOMAIN}" istio-system
+  create_certs pass "pass.${ISTIO_DOMAIN}" istioapi
+fi
 
 # Gateway API Certs
 create_certs edge "edge.${GWAPI_DOMAIN}" gwapi
@@ -120,17 +139,18 @@ create_certs re "re.${GWAPI_DOMAIN}" gwapi
 create_certs pass "pass.${GWAPI_DOMAIN}" gwapi
 
 # Configure istioapi examples via istio api
-cat ${YAML_DIR}/nginx-istioapi.yaml | envsubst | oc apply -f -
-if [[ $? -ne 0 ]]; then
-  echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-istioapi.yaml"
-  exit 1
+if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
+  cat ${YAML_DIR}/nginx-istioapi.yaml | envsubst | oc apply -f -
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-istioapi.yaml"
+    exit 1
+  fi
 fi
 cat ${YAML_DIR}/nginx-gwapi.yaml | envsubst | oc apply -f -
 if [[ $? -ne 0 ]]; then
   echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-gwapi.yaml"
   exit 1
 fi
-#cat ${YAML_DIR}/echo-service-sleeper-istioapi.yaml | envsubst | oc apply -f -
 cat ${YAML_DIR}/gwapi-features-examples.yaml | envsubst | oc apply -f -
 if [[ $? -ne 0 ]]; then
   echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-gwapi.yaml"
@@ -144,8 +164,8 @@ if [[ "$ISTIO_BM" != "true" ]]; then
   TIMEOUT=60
   while [[ "$GWAPI_LOADBALANCER_DOMAIN" == "" ]] && [[ "$GWAPI_LOADBALANCER_IP" == "" ]]; do
     # For AWS, it uses hostname, but for GCE, it uses IP
-    GWAPI_LOADBALANCER_DOMAIN=$(oc -n gwapi get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-    GWAPI_LOADBALANCER_IP=$(oc -n gwapi get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    GWAPI_LOADBALANCER_DOMAIN=$(oc -n $GWAPI_SERVICE_NAMESPACE get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+    GWAPI_LOADBALANCER_IP=$(oc -n $GWAPI_SERVICE_NAMESPACE get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     echo "Waiting for gateway api loadbalancer to get domain name"
     if [[ "$TIMEOUT" -lt 0 ]]; then
       echo "ERROR: Gateway API loadbalancer never got domain name"
@@ -181,12 +201,14 @@ spec:
 EOF
 fi
 
-echo "ISITIO API:"
-echo "curl -I http://http.${ISTIO_DOMAIN}"
-echo "curl --cacert ${CERT_DIR}/ca.crt -I https://edge.${ISTIO_DOMAIN}"
-echo "curl --cacert ${CERT_DIR}/ca.crt -I https://re.${ISTIO_DOMAIN}"
-echo "curl --cacert ${CERT_DIR}/ca.crt -I https://pass.${ISTIO_DOMAIN}"
-echo
+if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
+  echo "ISITIO API:"
+  echo "curl -I http://http.${ISTIO_DOMAIN}"
+  echo "curl --cacert ${CERT_DIR}/ca.crt -I https://edge.${ISTIO_DOMAIN}"
+  echo "curl --cacert ${CERT_DIR}/ca.crt -I https://re.${ISTIO_DOMAIN}"
+  echo "curl --cacert ${CERT_DIR}/ca.crt -I https://pass.${ISTIO_DOMAIN}"
+  echo
+fi
 echo "GWAPI:"
 echo "curl -I http://http.${GWAPI_DOMAIN}"
 echo "curl --cacert ${CERT_DIR}/ca.crt -I https://edge.${GWAPI_DOMAIN}"
@@ -195,3 +217,5 @@ echo "curl --cacert ${CERT_DIR}/ca.crt -I https://pass.${GWAPI_DOMAIN}"
 if [[ "$ISTIO_BM" == "true" ]]; then
   echo "WARNING: For baremetal you need to configure DNS yourself!"
 fi
+echo "Or you can just run ./test-all-routes.sh"
+echo "NOTE: Please wait a couples minute for DNS to propagate and pods to start before testing"
