@@ -34,8 +34,5 @@ if [[ "$ISTIO_HOST_NETWORKING" == "true" ]]; then
   hostNetArg="-f $thisdir/../yaml/hostnet-overlay.yaml"
 fi
 
-# Install Istio for openshift
+# Install Istio via istioctl for openshift
 istioctl install -y --set profile=openshift --set meshConfig.accessLogFile=/dev/stdout ${hostNetArg:-}
-
-# Install gateway api
-kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.0" | kubectl apply -f -; }
