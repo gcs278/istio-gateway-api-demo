@@ -16,6 +16,7 @@ for i in {1..30}; do
   fi
 done
 
+# This is the istio control plane (istiod)
 echo "Waiting for istiod deployment to rollout"
 for i in {1..30}; do
   if oc rollout status -w deployment -n $NAMESPACE istiod-istio-ingress; then
@@ -26,8 +27,16 @@ for i in {1..30}; do
   fi
 done
 
+# This is the default ingress gateway (Envoy Proxy deployment)
 echo "Waiting for istio-ingressgateway deployment to rollout"
-oc rollout status -w deployment -n $NAMESPACE istio-ingressgateway
+for i in {1..30}; do
+  if oc rollout status -w deployment -n $NAMESPACE istio-ingressgateway; then
+   break
+  else
+    echo "Attempt #${i}: Waiting for istio-ingressgateway to appear...trying again."
+    sleep 3
+  fi
+done
 
 # Due to https://issues.redhat.com/browse/OSSM-1846, we manually patch the istiod deployment to allow Pilot to auto-create deployments/services for Gateway API (one per Gateway Object)
 # This just enables the feature, but you have ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT=true set, this doesn't matter
