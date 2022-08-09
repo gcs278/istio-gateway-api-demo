@@ -1,64 +1,17 @@
-######################################################################
-# Envoy Ingress with Istio API
-######################################################################
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: istio-cni
-  namespace: istioapi
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: istioapi
-  namespace: istioapi
----
-apiVersion: v1
-kind: Service
-metadata:
-  namespace: istioapi
-  name: nginx
-  labels:
-    app: nginx
-    service: nginx
-spec:
-  ports:
-  - name: http
-    port: 8000
-    targetPort: 80
-  selector:
-    app: nginx
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx
-  namespace: istioapi
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nginx
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: nginx
-        version: v1
-    spec:
-      serviceAccountName: istioapi
-      containers:
-      - image: quay.io/gspence/nginx
-        imagePullPolicy: Always
-        name: nginx
-        ports:
-        - containerPort: 80
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: http-gateway
-  namespace: istioapi
 spec:
   selector:
     istio: ingressgateway # use Istio default gateway implementation
@@ -74,7 +27,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: http
-  namespace: istioapi
 spec:
   hosts:
   - "http.${ISTIO_DOMAIN}"
@@ -91,7 +43,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: edge-gateway
-  namespace: istioapi
 spec:
   selector:
     istio: ingressgateway # use Istio default gateway implementation
@@ -111,7 +62,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: edge
-  namespace: istioapi
 spec:
   hosts:
   - "edge.${ISTIO_DOMAIN}"
@@ -127,7 +77,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: istioapi
   name: nginx-reencrypt
   labels:
     app: nginx-ssl
@@ -143,7 +92,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  namespace: istioapi
   name: nginx-pass
   labels:
     app: nginx-ssl
@@ -156,48 +104,10 @@ spec:
   selector:
     app: nginx-ssl
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-ssl
-  namespace: istioapi
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nginx-ssl
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: nginx-ssl
-        version: v1
-    spec:
-      serviceAccountName: istioapi
-      containers:
-      - image: quay.io/gspence/nginx-ssl
-        imagePullPolicy: Always
-        name: nginx-ssl
-        ports:
-        - containerPort: 443
-        volumeMounts:
-        - name: cert
-          mountPath: /etc/nginx/certs
-      volumes:
-      - name: cert
-        secret:
-          secretName: pass-credential
-          items:
-          - key: tls.crt
-            path: server.crt
-          - key: tls.key
-            path: server.key
----
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: reencrypt-gateway
-  namespace: istioapi
 spec:
   selector:
     istio: ingressgateway # use Istio default gateway implementation
@@ -217,7 +127,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: reencrypt
-  namespace: istioapi
 spec:
   hosts:
   - "re.${ISTIO_DOMAIN}"
@@ -234,7 +143,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: reencrypt
-  namespace: istioapi
 spec:
   host: nginx-reencrypt.istioapi.svc.cluster.local
   trafficPolicy:
@@ -245,7 +153,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: passthrough-gateway
-  namespace: istioapi
 spec:
   selector:
     istio: ingressgateway # use Istio default gateway implementation
@@ -263,7 +170,6 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: passthrough
-  namespace: istioapi
 spec:
   hosts:
   - "pass.${ISTIO_DOMAIN}"

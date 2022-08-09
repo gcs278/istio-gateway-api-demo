@@ -1,14 +1,12 @@
 #! /usr/bin/env bash
 
-set -u
+set -eu
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
 YAML_DIR=${SCRIPT_DIR}/../yaml
+DEMO_YAML_DIR=${SCRIPT_DIR}/../yaml/demos
 CERT_DIR=/tmp/istio-certs
 mkdir -p $CERT_DIR
-
-: "${ISTIO_BM:=""}"
-: "${ISTIO_API_DEMO:=""}"
 
 function create_certs() {
   TYPE="$1"
@@ -24,7 +22,9 @@ function create_certs() {
     echo "ERROR: Cert generation for $CERT_DOMAIN failed!"
     exit 1
   fi
-  oc delete -n $NAMESPACE secret ${TYPE}-credential 2>/dev/null
+  if oc get -n $NAMESPACE secret ${TYPE}-credential 2> /dev/null; then
+    oc delete -n $NAMESPACE secret ${TYPE}-credential 2>/dev/null
+  fi
   oc create -n $NAMESPACE secret tls ${TYPE}-credential --key=${CERT_DIR}/${TYPE}.${NAMESPACE}.key --cert=${CERT_DIR}/${TYPE}.${NAMESPACE}.crt
 }
 
@@ -80,9 +80,10 @@ oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-servic
 
 GWAPI_SERVICE="gateway"
 GWAPI_SERVICE_NAMESPACE="gwapi"
-if [[ "${GW_MANUAL_DEPLOYMENT:=}" == "true" ]]; then
+: "${GW_ADDRESSES_YAML:=""}"
+if [[ "${GW_MANUAL_DEPLOYMENT}" == "true" ]]; then
   echo "GW_MANUAL_DEPLOYMENT is set. Using manual deployment for GWAPI"
-  if [[ "${GW_HOST_NETWORKING:=}" == "true" ]]; then
+  if [[ "${GW_HOST_NETWORKING}" == "true" ]]; then
     echo "GW_HOST_NETWORKING is set. Using host networking for GWAPI"
     export GW_HOST_NETWORKING_YAML=$(cat <<-END
         ports:
@@ -109,7 +110,7 @@ END
 )
 fi
 
-if [[ "${ISTIO_OSSM}" == "true" ]] && [[ "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT=}" == "true" ]]; then
+if [[ "${ISTIO_OSSM}" == "true" ]] && [[ "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT}" == "true" ]]; then
   # This points the demo Gateway Object to use the default istiod created deployment
   export GW_ADDRESSES_YAML=$(cat <<-END
 addresses:
@@ -140,23 +141,30 @@ create_certs pass "pass.${GWAPI_DOMAIN}" gwapi
 
 # Configure istioapi examples via istio api
 if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
-  cat ${YAML_DIR}/nginx-istioapi.yaml | envsubst | oc apply -f -
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-istioapi.yaml"
-    exit 1
-  fi
-fi
-cat ${YAML_DIR}/nginx-gwapi.yaml | envsubst | oc apply -f -
-if [[ $? -ne 0 ]]; then
-  echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-gwapi.yaml"
-  exit 1
-fi
-cat ${YAML_DIR}/gwapi-features-examples.yaml | envsubst | oc apply -f -
-if [[ $? -ne 0 ]]; then
-  echo "ERROR: Something went wrong with configuring ${YAML_DIR}/nginx-gwapi.yaml"
-  exit 1
+  # Set up nginx server for istioapi example
+  oc apply -n istioapi -f ${DEMO_YAML_DIR}/nginx-deployments.yaml
+  # Find all ISTIO API Demo YAML and process it
+  for yaml in $(find ${DEMO_YAML_DIR}/istioapi -mindepth 1 -iname "*.y*ml"); do
+    cat ${yaml} | envsubst | oc apply -n istioapi -f -
+    if [[ $? -ne 0 ]]; then
+      echo "ERROR: Something went wrong with configuring ${yaml}"
+      exit 1
+    fi
+  done
 fi
 
+# Set up nginx server for gwapi example
+oc apply -n gwapi -f ${DEMO_YAML_DIR}/nginx-deployments.yaml
+
+# Install all GWAPI Demos
+# TODO: Convert to templates kustomize
+for yaml in $(find ${DEMO_YAML_DIR}/gwapi -mindepth 1 -iname "*.y*ml"); do
+  cat ${yaml} | envsubst | oc apply -n gwapi -f -
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR: Something went wrong with configuring ${yaml}"
+    exit 1
+  fi
+done
 
 if [[ "$ISTIO_BM" != "true" ]]; then
   : "${GWAPI_LOADBALANCER_DOMAIN:=""}"

@@ -64,8 +64,8 @@ ${HELPER}/install-gwapi.sh
 # Clear certs for new installation
 rm -rf /tmp/istio-certs
 
-# Configure nginx examples
-${HELPER}/create-nginx-examples.sh "$@"
+# Configure ingress examples
+${HELPER}/create-ingress-examples.sh "$@"
 
 if [[ "${ISTIO_BM:=}" != "true" ]] && [[ "${ISTIO_CONVERT_CONSOLE:=}" == "true" ]]; then
   # Convert the console route to istio ingress

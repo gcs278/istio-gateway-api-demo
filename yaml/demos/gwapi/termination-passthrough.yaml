@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-pass
+  labels:
+    app: nginx-ssl
+    service: nginx-pass
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: 443
+  selector:
+    app: nginx-ssl
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: passthrough
+spec:
+  parentRefs:
+  - name: gateway
+  hostnames: ["pass.${GWAPI_DOMAIN}"]
+  rules:
+  - backendRefs:
+    - name: nginx-pass
+      port: 8443

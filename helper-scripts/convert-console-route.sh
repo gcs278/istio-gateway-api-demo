@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
-YAML_DIR=${SCRIPT_DIR}/../yaml
+YAML_DIR=${SCRIPT_DIR}/../yaml/demos/istioapi
 
 export DNS_RECORD_TYPE="CNAME"
 export INGRESS_HOST=$(oc -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
