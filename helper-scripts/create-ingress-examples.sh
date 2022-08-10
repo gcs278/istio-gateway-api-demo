@@ -22,7 +22,7 @@ function create_certs() {
     echo "ERROR: Cert generation for $CERT_DOMAIN failed!"
     exit 1
   fi
-  if oc get -n $NAMESPACE secret ${TYPE}-credential 2> /dev/null; then
+  if oc get -n $NAMESPACE secret ${TYPE}-credential &> /dev/null; then
     oc delete -n $NAMESPACE secret ${TYPE}-credential 2>/dev/null
   fi
   oc create -n $NAMESPACE secret tls ${TYPE}-credential --key=${CERT_DIR}/${TYPE}.${NAMESPACE}.key --cert=${CERT_DIR}/${TYPE}.${NAMESPACE}.crt

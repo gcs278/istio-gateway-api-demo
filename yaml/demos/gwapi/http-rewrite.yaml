@@ -1,3 +1,4 @@
+# AS OF AUG 09, 2022: I can't get this to work because this only works with Istio v1.15!!!
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: HTTPRoute
 metadata:
@@ -7,10 +8,10 @@ spec:
   - name: gateway
   hostnames: ["http-rewrite.hf.${GWAPI_DOMAIN}"]
   rules:
-  - backendRefs:
+  - filters:
+    - type: URLRewrite
+      urlRewrite:
+        hostname: "http.${GWAPI_DOMAIN}"
+    backendRefs:
     - name: nginx
       port: 8000
-      filters:
-      - type: URLRewrite
-        urlRewrite:
-          hostname: "http-rewrited.hf.${GWAPI_DOMAIN}"
