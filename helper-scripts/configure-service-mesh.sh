@@ -41,4 +41,4 @@ done
 # Due to https://issues.redhat.com/browse/OSSM-1846, we manually patch the istiod deployment to allow Pilot to auto-create deployments/services for Gateway API (one per Gateway Object)
 # This just enables the feature, but you have ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT=true set, this doesn't matter
 # NOTE: Due to service mesh not supporting deployment template injection, auto-deployment creation won't even work
-oc -n $NAMESPACE patch deploy/istiod-istio-ingress --type=strategic --patch='{"spec":{"template":{"spec":{"containers":[{"name":"discovery","env":[{"name":"PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER","value":"true"}]}]}}}}'
+#oc -n $NAMESPACE patch deploy/istiod-istio-ingress --type=strategic --patch='{"spec":{"template":{"spec":{"containers":[{"name":"discovery","env":[{"name":"PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER","value":"true"}]}]}}}}'

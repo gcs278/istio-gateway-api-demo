@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-hosts_gwapi="$(oc get httproute -n gwapi --no-headers -o custom-columns="route:.spec.hostnames[0]") $(oc get tlsroute -n gwapi --no-headers -o custom-columns="route:.spec.hostnames[0]")"
+hosts_gwapi="$(oc get httproute -A --no-headers -o custom-columns="route:.spec.hostnames[0]") $(oc get tlsroute -A --no-headers -o custom-columns="route:.spec.hostnames[0]")"
 hosts_istio="$(oc get VirtualService -n istioapi --no-headers -o custom-columns="route:.spec.hosts[0]")"
 
 for j in ${hosts_istio} ${hosts_gwapi}; do

@@ -14,7 +14,7 @@ spec:
   ports:
   - name: http
     port: 8000
-    targetPort: 80
+    targetPort: 8080
   selector:
     app: nginx
 ---
@@ -40,7 +40,7 @@ spec:
         imagePullPolicy: Always
         name: nginx
         ports:
-        - containerPort: 80
+        - containerPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -64,7 +64,7 @@ spec:
         imagePullPolicy: Always
         name: nginx-ssl
         ports:
-        - containerPort: 443
+        - containerPort: 8443
         volumeMounts:
         - name: cert
           mountPath: /etc/nginx/certs

@@ -11,8 +11,8 @@ metadata:
 spec:
   tracing:
     type: None
-  security:
-    manageNetworkPolicy: false
+  #security:
+  #  manageNetworkPolicy: false
   policy:
     type: Istiod
   gateways:
@@ -39,8 +39,8 @@ spec:
             PILOT_ENABLE_GATEWAY_API: "true"
             PILOT_ENABLE_GATEWAY_API_STATUS: "true"
             # NOTE: Enabling this breaks OSSM! See: https://issues.redhat.com/browse/OSSM-1846
-            #PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: "true"
-  version: v2.2
+            PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: "true"
+  version: v2.3
 ---
 apiVersion: maistra.io/v1
 kind: ServiceMeshMemberRoll
@@ -48,24 +48,25 @@ metadata:
   name: default
   namespace: gwapi
 spec:
-  controlPlaneRef:
-    name: istio-ingress
-    namespace: gwapi
   members:
   - gwapi
+  - bookinfo
 ---
 # This due to bug about PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER so we can manually enable deployment creation
 # This can be removed when https://issues.redhat.com/browse/OSSM-1846 is fixed
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: serviceaccounts-cluster-admin
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: istiod-istio-ingress
-  namespace: gwapi
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: ClusterRoleBinding
+#metadata:
+#  name: serviceaccounts-cluster-admin
+#roleRef:
+#  apiGroup: rbac.authorization.k8s.io
+#  kind: ClusterRole
+#  name: cluster-admin
+#subjects:
+#- kind: ServiceAccount
+#  name: istiod-istio-ingress
+#  namespace: gwapi
+#- kind: ServiceAccount
+#  name: istio-ingressgateway-service-account
+#  namespace: gwapi
 

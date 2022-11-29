@@ -10,6 +10,7 @@ set -a
 : "${ISTIO_CONVERT_CONSOLE:=false}"
 : "${ISTIO_OSSM:=false}"
 : "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT:=true}"
+: "${ISTIO_OSSM_SERVICE_MESH_EXAMPLE:=true}"
 : "${GW_MANUAL_DEPLOYMENT:=false}"
 : "${GW_HOST_NETWORKING:=false}"
 set +a
@@ -50,6 +51,9 @@ read -p "Press enter to continue the installation"
 
 HELPER="./helper-scripts"
 
+# Install GW API CRDs
+${HELPER}/install-gwapi.sh
+
 # Install Istio via istioctl
 if [[ "${ISTIO_OSSM=}" == "true" ]]; then
   ${HELPER}/install-service-mesh-operator.sh
@@ -58,14 +62,16 @@ else
   ${HELPER}/install-istio.sh
 fi
 
-# Install GW API CRDs
-${HELPER}/install-gwapi.sh
-
 # Clear certs for new installation
 rm -rf /tmp/istio-certs
 
 # Configure ingress examples
 ${HELPER}/create-ingress-examples.sh "$@"
+
+# Configure service mesh examples
+if [[ "${ISTIO_OSSM_SERVICE_MESH_EXAMPLE:=}" == "true" && "${ISTIO_OSSM:=}" == "true" ]]; then
+   ${HELPER}/create-service-mesh-example.sh 
+fi
 
 if [[ "${ISTIO_BM:=}" != "true" ]] && [[ "${ISTIO_CONVERT_CONSOLE:=}" == "true" ]]; then
   # Convert the console route to istio ingress

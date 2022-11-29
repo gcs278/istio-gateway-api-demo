@@ -74,9 +74,13 @@ if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
   oc adm policy add-scc-to-group anyuid system:serviceaccounts:istioapi
 fi
 oc create namespace gwapi  --dry-run=client -o yaml | oc apply --overwrite=true -f -
-oc adm policy add-scc-to-group anyuid system:serviceaccounts:gwapi
-oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run=client -o yaml | oc apply -f -
-oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
+
+# If it's upstream istio, we will be creating gateway deployments in the gwapi namespace. They need privileged to be created here.
+if [[ "${ISTIO_OSSM}" != "true" ]]; then
+  oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run=client -o yaml | oc apply -f -
+  oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
+  oc adm policy add-scc-to-group anyuid system:serviceaccounts:gwapi
+fi
 
 GWAPI_SERVICE="gateway"
 GWAPI_SERVICE_NAMESPACE="gwapi"

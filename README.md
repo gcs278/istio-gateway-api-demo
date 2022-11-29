@@ -32,6 +32,7 @@ Istio Ingress should now be operational with your cluster
 | `ISTIO_CONVERT_CONSOLE` | Sripts will convert the console route to Istio Gateway using Istio API. | `false` |
 | `ISTIO_OSSM` | Openshift Service Mesh will be installed and be utilized for the control plane instead of using `istioctl`. | `false` |
 | `ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT` | All Gateway API objects will use the default single Envoy Proxy created by OSSM's Istiod (istio-system/istio-ingressgateway). | `true` |
+| `ISTIO_OSSM_SERVICE_MESH_EXAMPLE` | Creates a Service Mesh example in the bookinfo namespace that is accessible by Gateway API Ingress. | `true` |
 | `GW_MANUAL_DEPLOYMENT` | A single Envoy Deployment will be created by these scripts instead of allowing istiod to auto create it. This changes the architecture from one-to-one gateway to deployment to many-to-one gateways to our manual deployment. | `false` |
 | `GW_HOST_NETWORKING`   | Gateway API implementation will use host networking. Requires `GW_MANUAL_DEPLOYMENT` to be true. | `false` |
 

@@ -1,5 +1,3 @@
-FROM quay.io/gspence/nginx-ssl
+FROM quay.io/gspence/nginx
 
 COPY default.conf /etc/nginx/conf.d
-
-RUN chown 101:101 /var/cache/nginx

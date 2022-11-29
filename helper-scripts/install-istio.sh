@@ -35,4 +35,4 @@ if [[ "$ISTIO_HOST_NETWORKING" == "true" ]]; then
 fi
 
 # Install Istio via istioctl for openshift
-istioctl install -y --set profile=openshift --set meshConfig.accessLogFile=/dev/stdout ${hostNetArg:-}
+istioctl install -y --set profile=minimal --set meshConfig.accessLogFile=/dev/stdout ${hostNetArg:-}
