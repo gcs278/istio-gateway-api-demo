@@ -37,4 +37,4 @@ oc apply -f ${SERVICE_MESH_YAML}/bookinfo-service-versions-for-istioapi.yaml
 
 
 
-echo "Navigate to http://book.${GWAPI_DOMAIN}/productpages"
+echo "Navigate to http://book.${GWAPI_DOMAIN}/productpage"

@@ -13,6 +13,12 @@ spec:
     type: None
   #security:
   #  manageNetworkPolicy: false
+  proxy:
+    accessLogging:
+      envoyService:
+        enabled: true
+      file:
+        name: /dev/stdout
   policy:
     type: Istiod
   gateways:

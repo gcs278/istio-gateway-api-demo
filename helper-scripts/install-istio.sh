@@ -15,7 +15,7 @@ oc create namespace istio-system --dry-run=client -o yaml | oc apply -f -
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:istio-system
 oc adm policy add-scc-to-user privileged -n istio-system -z istio-ingressgateway-service-account
 
-: "${ISTIO_RELEASE:=https://github.com/istio/istio/releases/download/1.14.2/istio-1.14.2-linux-amd64.tar.gz}"
+: "${ISTIO_RELEASE:=https://github.com/istio/istio/releases/download/1.16.0/istio-1.16.0-linux-amd64.tar.gz}"
 
 if [[ ! -x "$DOWNLOAD_DIR/bin/istioctl" ]]; then
     echo "Downloading and extracting $ISTIO_RELEASE"
@@ -35,4 +35,4 @@ if [[ "$ISTIO_HOST_NETWORKING" == "true" ]]; then
 fi
 
 # Install Istio via istioctl for openshift
-istioctl install -y --set profile=minimal --set meshConfig.accessLogFile=/dev/stdout ${hostNetArg:-}
+istioctl install -y --set profile=minimal --set meshConfig.accessLogFile=/dev/stdout ${hostNetArg:-} --set meshConfig.defaultConfig.gatewayTopology.numTrustedProxies=1
