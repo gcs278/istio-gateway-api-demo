@@ -9,7 +9,7 @@ set -e
 #      dns_canonicalize_hostname = fallback
 
 if ! klist -s; then
-  echo "Log into kerberos:"
+  echo "Log into kerberos (should be your laptop password):"
   kinit ${USER}@IPA.REDHAT.COM
 fi
 
@@ -52,9 +52,9 @@ EOF
 latest_build=$(brew list-builds --package=istio-rhel8-operator-metadata-container --owner=exd-cpaas-bot-prod  | tail -1 | awk '{print $1}')
 echo "Latest Build: $latest_build"
 
-url=$(curl -sS http://external-ci-coldstorage.datahub.redhat.com/cvp/cvp-redhat-operator-bundle-image-validation-test/istio-rhel8-operator-metadata-container-2.4.0-33/ | grep href | tail -1 | grep -io '<a href=['"'"'"][^"'"'"']*['"'"'"]' |   sed -e 's/^<a href=["'"'"']//i' -e 's/["'"'"']$//i')
+url=$(curl -sS http://external-ci-coldstorage.datahub.redhat.com/cvp/cvp-redhat-operator-bundle-image-validation-test/${latest_build}/ | grep href | tail -1 | grep -io '<a href=['"'"'"][^"'"'"']*['"'"'"]' |   sed -e 's/^<a href=["'"'"']//i' -e 's/["'"'"']$//i')
 
-cvpTestReport=$(curl -sS http://external-ci-coldstorage.datahub.redhat.com/cvp/cvp-redhat-operator-bundle-image-validation-test/istio-rhel8-operator-metadata-container-2.4.0-33/580cbd75-345b-4530-8475-d614e645773a/cvp-test-report.html)
+cvpTestReport=$(curl -sS ${url}cvp-test-report.html)
 indexImage=$( echo "$cvpTestReport" | grep -i "Index image v4." | tail -1)
 image=$(echo "$indexImage" | awk '{print $5}')
 image=${image%<\/div>}
@@ -94,3 +94,4 @@ spec:
   sourceNamespace: openshift-marketplace
 EOF
 
+echo "Successfully installed the latest OSSM Daily Build!"
