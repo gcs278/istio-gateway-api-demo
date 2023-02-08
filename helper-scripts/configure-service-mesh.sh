@@ -1,8 +1,13 @@
 #! /usr/bin/env bash
 
+VERSION="2.3"
+if [[ "$ISTIO_OSSM_DAILY_BUILD" == "true" ]]; then
+  VERSION="daily"
+fi
+
 set -ue
 thisdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-YAML_DIR=${thisdir}/../yaml
+YAML_DIR=${thisdir}/../yaml/ossm-${VERSION}
 NAMESPACE="gwapi"
 
 

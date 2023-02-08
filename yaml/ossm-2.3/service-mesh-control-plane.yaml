@@ -25,7 +25,6 @@ spec:
     ingress:
       service:
         type: LoadBalancer
-      ingress: true
       enabled: true
   addons:
     grafana:
@@ -37,6 +36,12 @@ spec:
     jaeger:
       name: jaeger
       install: {}
+  # This doesn't work, but leave it here for reference
+  techPreview:
+    meshConfig:
+      defaultConfig:
+        gatewayTopology:
+          numTrustedProxies: 1
   runtime:
     components:
       pilot:
@@ -46,6 +51,7 @@ spec:
             PILOT_ENABLE_GATEWAY_API_STATUS: "true"
             # NOTE: Enabling this breaks OSSM! See: https://issues.redhat.com/browse/OSSM-1846
             PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: "true"
+            PILOT_GATEWAY_API_CONTROLLER_NAME: openshift.io/gateway-controller
   version: v2.3
 ---
 apiVersion: maistra.io/v1

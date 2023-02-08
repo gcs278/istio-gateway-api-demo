@@ -8,7 +8,8 @@ set -a
 : "${ISTIO_HOST_NETWORKING:=false}"
 : "${ISTIO_BM:=false}"
 : "${ISTIO_CONVERT_CONSOLE:=false}"
-: "${ISTIO_OSSM:=false}"
+: "${ISTIO_OSSM:=true}"
+: "${ISTIO_OSSM_DAILY_BUILD:=false}"
 : "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT:=true}"
 : "${ISTIO_OSSM_SERVICE_MESH_EXAMPLE:=true}"
 : "${GW_MANUAL_DEPLOYMENT:=false}"
@@ -56,7 +57,12 @@ ${HELPER}/install-gwapi.sh
 
 # Install Istio via istioctl
 if [[ "${ISTIO_OSSM=}" == "true" ]]; then
-  ${HELPER}/install-service-mesh-operator.sh
+  if [[ "${ISTIO_OSSM_DAILY_BUILD}" == "true" ]]; then
+     echo "Installing OSSM Daily build, follow the prompts below:"
+    ./install-ossm-daily-build.sh
+  else
+    ${HELPER}/install-service-mesh-operator.sh
+  fi
   ${HELPER}/configure-service-mesh.sh
 else
   ${HELPER}/install-istio.sh

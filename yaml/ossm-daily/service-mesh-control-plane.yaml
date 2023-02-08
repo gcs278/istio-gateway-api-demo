@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gwapi
+---
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: gwapi
+  namespace: gwapi
+spec:
+  tracing:
+    type: None
+  proxy:
+    accessLogging:
+      envoyService:
+        enabled: true
+      file:
+        name: /dev/stdout
+  policy:
+    type: Istiod
+  gateways:
+    egress:
+      enabled: false
+    ingress:
+      service:
+        type: LoadBalancer
+      enabled: true
+      ingress: true
+  addons:
+    grafana:
+      enabled: false
+    kiali:
+      enabled: false
+    prometheus:
+      enabled: false
+    jaeger:
+      name: jaeger
+      install: {}
+  security:
+    manageNetworkPolicy: false
+  techPreview:
+    controlPlaneMode:
+      ClusterScoped
+    gatewayAPI:
+      enabled: true
+      controllerMode: true
+  runtime:
+    components:
+      pilot:
+        container:
+          env:
+            PILOT_GATEWAY_API_CONTROLLER_NAME: openshift.io/gateway-controller
+            PILOT_ENABLE_GATEWAY_API: "true"
+            PILOT_ENABLE_GATEWAY_API_STATUS: "true"
+            PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: "true"
+  version: v2.4
+---
+apiVersion: maistra.io/v1
+kind: ServiceMeshMemberRoll
+metadata:
+  name: default
+  namespace: gwapi
+spec:
+  members:
+  - gwapi
+  - bookinfo
+---

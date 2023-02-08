@@ -1,8 +1,10 @@
 #! /usr/bin/env bash
 
+VERSION="2.3"
+
 set -ue
 thisdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-YAML_DIR=${thisdir}/../yaml
+YAML_DIR=${thisdir}/../yaml/ossm-${VERSION}
 
 echo "Installing Openshift Service Mesh Operator"
 oc apply -f ${YAML_DIR}/service-mesh-installation.yaml

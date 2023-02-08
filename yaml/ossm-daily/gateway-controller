@@ -1,0 +1,33 @@
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: gateway-controller
+spec:
+  techPreview:
+    controlPlaneMode:
+      ClusterScoped
+    gatewayAPI:
+      enabled: true
+      controllerMode: true
+  addons:
+    grafana:
+      enabled: false
+    jaeger:
+      install: {}
+      name: jaeger
+    kiali:
+      enabled: false
+    prometheus:
+      enabled: false
+  gateways:
+    egress:
+      enabled: false
+    ingress:
+      enabled: true
+      ingress: true
+  policy:
+    type: Istiod
+  security:
+    manageNetworkPolicy: false
+  tracing:
+    type: None
