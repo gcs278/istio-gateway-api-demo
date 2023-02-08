@@ -7,22 +7,28 @@ set -e
 # 3. Make sure /etc/krb5.conf has:
 #   [libdefaults]
 #      dns_canonicalize_hostname = fallback
-
-if ! klist -s; then
+TOKEN_URL=https://employee-token-manager.registry.redhat.com/v1/tokens
+if curl --negotiate -u : ${TOKEN_URL} -s | grep -qi "no authorization context provided"; then
+  echo "No active kerberos ticket..."
   echo "Log into kerberos (should be your laptop password):"
   kinit ${USER}@IPA.REDHAT.COM
 fi
 
 # Need to create, or retrieve a token to add to your cluster so you can pull the daily image
 # If you have one already (made with the description we specified in this script...)
-tokens=$(curl --negotiate -u : https://employee-token-manager.registry.redhat.com/v1/tokens -s | jq)
+tokens=$(curl --negotiate -u : ${TOKEN_URL} -s | jq)
 if echo "$tokens" | grep -qi "Using Istio developer build images"; then
   echo "Token already exists, using that"
 else
-  tokens=$(curl --negotiate -u : -X POST -H 'Content-Type: application/json' --data '{"description":"Using Istio developer build images"}' https://employee-token-manager.registry.redhat.com/v1/tokens -s | jq)
+  tokens=$(curl --negotiate -u : -X POST -H 'Content-Type: application/json' --data '{"description":"Using Istio developer build images"}' ${TOKEN_URL} -s | jq)
 fi
 username="$(echo "$tokens" | jq '.[0].credentials.username' | tr -d '"')"
 password="$(echo "$tokens" | jq '.[0].credentials.password' | tr -d '"')"
+
+if [[ "$username" == "" ]] || [[ "$password" == "" ]]; then
+  echo "ERROR: Something went wrong with getting token"
+  exit 1
+fi
 
 # Add the token to the pull secret file
 oc get secret/pull-secret -n openshift-config -o json | jq -r '.data.".dockerconfigjson"' | base64 -d > authfile
@@ -93,5 +99,13 @@ spec:
   name: servicemeshoperator
   sourceNamespace: openshift-marketplace
 EOF
+
+while ! oc get deployment -n openshift-operators istio-operator &> /dev/null; do
+  echo "Waiting for the istio-operator deployment to appear in openshift-operators namespace (this can take a long time)"
+  sleep 5
+done
+
+echo "Waiting for istio-operator deployment to rollout"
+oc rollout status -w deployment -n openshift-operators istio-operator
 
 echo "Successfully installed the latest OSSM Daily Build!"
