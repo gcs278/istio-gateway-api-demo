@@ -10,7 +10,7 @@ metadata:
   namespace: auto 
 spec:
   selector:
-    istio: ingressgateway # use Istio default gateway implementation
+    istio: openshift-gateway # use Istio default gateway implementation
   gatewayClassName: istio
   listeners:
   - name: auto

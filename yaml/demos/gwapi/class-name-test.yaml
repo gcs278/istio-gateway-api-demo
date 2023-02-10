@@ -1,0 +1,40 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: not-openshift-gateway
+spec:
+  controllerName: "openshift.io/not-gateway-controller"
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway-class-name-test
+  namespace: gwapi
+spec:
+  selector:
+    istio: openshift-gateway # use Istio default gateway implementation
+  gatewayClassName: not-openshift-gateway 
+  ${GW_ADDRESSES_YAML}
+  listeners:
+  - name: invalid
+    hostname: "invalid.gateway-class-name-test.gwapi.fake.com"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: gateway-class-name-test
+  namespace: gwapi
+spec:
+  parentRefs:
+  - name: gateway-class-name-test
+    namespace: gwapi
+  hostnames: ["invalid.gateway-class-name-test.gwapi.fake.com"]
+  rules:
+  - backendRefs:
+    - name: nginx
+      port: 8000

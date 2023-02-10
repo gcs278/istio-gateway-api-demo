@@ -26,6 +26,10 @@ for j in ${hosts_istio} ${hosts_gwapi}; do
     gateway_ns=$(echo "${URL}" | awk -F'.' '{print $3}')
     HOST_ARG="-HHost:${URL}"
     URL=$(oc get gateway -n $gateway_ns $gateway -o jsonpath='{.status.addresses[0].value}')
+    if [[ "$URL" == "" ]]; then 
+      echo " -> ERROR: Gateway ${gateway} is not admitted"
+      continue
+    fi
   fi
 
   cmd="curl ${HOST_ARG} -k -sS -I ${PROTO}://${URL}/${PAGE}"

@@ -1,11 +1,18 @@
 apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: openshift-gateway
+spec:
+  controllerName: "openshift.io/not-gateway-controller"
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: gateway
   namespace: gwapi
 spec:
   selector:
-    istio: ingressgateway # use Istio default gateway implementation
+    istio: openshift-gateway # use Istio default gateway implementation
   gatewayClassName: istio
   ${GW_ADDRESSES_YAML}
   listeners:
