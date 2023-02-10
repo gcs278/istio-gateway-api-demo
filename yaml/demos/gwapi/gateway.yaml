@@ -1,7 +1,8 @@
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: gateway
+  namespace: gwapi
 spec:
   selector:
     istio: ingressgateway # use Istio default gateway implementation
@@ -52,6 +53,27 @@ spec:
       - kind: TLSRoute
   - name: http-features
     hostname: "*.hf.${GWAPI_DOMAIN}"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: scope
+    hostname: "scope.${GWAPI_DOMAIN}"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: invalid-rg
+    hostname: "invalid-rg.${GWAPI_DOMAIN}"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: valid-rg
+    hostname: "valid-rg.${GWAPI_DOMAIN}"
     port: 80
     protocol: HTTP
     allowedRoutes:

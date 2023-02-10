@@ -11,8 +11,6 @@ metadata:
 spec:
   tracing:
     type: None
-  #security:
-  #  manageNetworkPolicy: false
   proxy:
     accessLogging:
       envoyService:
@@ -22,10 +20,13 @@ spec:
   policy:
     type: Istiod
   gateways:
+    egress:
+      enabled: false
     ingress:
       service:
         type: LoadBalancer
       enabled: true
+      ingress: true
   addons:
     grafana:
       enabled: false
@@ -36,12 +37,16 @@ spec:
     jaeger:
       name: jaeger
       install: {}
-  # This doesn't work, but leave it here for reference
+  security:
+    manageNetworkPolicy: false
   techPreview:
-    meshConfig:
-      defaultConfig:
-        gatewayTopology:
-          numTrustedProxies: 1
+    controlPlaneMode:
+      ClusterScoped
+  # This doesn't work, but leave it here for reference
+  #  meshConfig:
+  #    defaultConfig:
+  #      gatewayTopology:
+  #        numTrustedProxies: 1
   runtime:
     components:
       pilot:
@@ -49,7 +54,6 @@ spec:
           env:
             PILOT_ENABLE_GATEWAY_API: "true"
             PILOT_ENABLE_GATEWAY_API_STATUS: "true"
-            # NOTE: Enabling this breaks OSSM! See: https://issues.redhat.com/browse/OSSM-1846
             PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: "true"
             PILOT_GATEWAY_API_CONTROLLER_NAME: openshift.io/gateway-controller
   version: v2.3

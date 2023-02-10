@@ -163,7 +163,7 @@ oc apply -n gwapi -f ${DEMO_YAML_DIR}/nginx-deployments.yaml
 # Install all GWAPI Demos
 # TODO: Convert to templates kustomize
 for yaml in $(find ${DEMO_YAML_DIR}/gwapi -mindepth 1 -iname "*.y*ml"); do
-  cat ${yaml} | envsubst | oc apply -n gwapi -f -
+  cat ${yaml} | envsubst | oc apply -f -
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Something went wrong with configuring ${yaml}"
     exit 1

@@ -26,7 +26,11 @@ END
 cat ${SERVICE_MESH_YAML}/bookinfo-gateway.yaml | envsubst | oc apply -n gwapi -f -
 
 # Create a httproute to route from Ingress Gateway into Mesh
-oc apply -f ${SERVICE_MESH_YAML}/bookinfo-httproute.yaml
+cat ${SERVICE_MESH_YAML}/bookinfo-httproute.yaml | envsubst | oc apply -f -
+if [[ $? -ne 0 ]]; then
+  echo "ERROR: Something went wrong with configuring ${yaml}/bookinfo-httproute.yaml"
+  exit 1
+fi
 
 # Create a virtual Service to augument the Service Mesh to use V1
 # This tells Istio to override the default service traffic routing, and

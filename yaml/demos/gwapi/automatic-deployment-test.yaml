@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auto
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway-auto
+  namespace: auto 
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  gatewayClassName: istio
+  listeners:
+  - name: auto
+    hostname: "auto.gateway-auto.auto.fake.com"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: http
+  namespace: auto
+spec:
+  parentRefs:
+  - name: gateway-auto
+    namespace: auto
+  hostnames: ["auto.gateway-auto.auto.fake.com"]
+  rules:
+  - backendRefs:
+    - name: nginx
+      port: 8000
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx
+  namespace: auto
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: auto
+  labels:
+    app: nginx
+    service: nginx
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8080
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: auto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: nginx
+        version: v1
+    spec:
+      serviceAccountName: nginx
+      containers:
+      - image: quay.io/gspence/nginx
+        imagePullPolicy: Always
+        name: nginx
+        ports:
+        - containerPort: 8080
+---
+

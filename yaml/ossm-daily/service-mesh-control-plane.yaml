@@ -6,7 +6,7 @@ metadata:
 apiVersion: maistra.io/v2
 kind: ServiceMeshControlPlane
 metadata:
-  name: gwapi
+  name: istio-ingress
   namespace: gwapi
 spec:
   tracing:
