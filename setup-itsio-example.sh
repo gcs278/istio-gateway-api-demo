@@ -14,6 +14,7 @@ set -a
 : "${ISTIO_OSSM_SERVICE_MESH_EXAMPLE:=true}"
 : "${GW_MANUAL_DEPLOYMENT:=false}"
 : "${GW_HOST_NETWORKING:=false}"
+: "${ISTIO_UPSTREAM_VERSION:=1.16.2}"
 set +a
 
 echo "Environment Variables:"

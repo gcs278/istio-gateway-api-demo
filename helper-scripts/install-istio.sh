@@ -5,7 +5,7 @@ set -eu
 thisdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 pushd "$thisdir" > /dev/null 2>&1
 
-DOWNLOAD_DIR="/tmp/istio-download"
+DOWNLOAD_DIR="/tmp/istio-download-${ISTIO_UPSTREAM_VERSION}"
 mkdir -p "$DOWNLOAD_DIR"
 
 : "${ISTIO_HOST_NETWORKING:=""}"
@@ -15,7 +15,7 @@ oc create namespace istio-system --dry-run=client -o yaml | oc apply -f -
 oc adm policy add-scc-to-group anyuid system:serviceaccounts:istio-system
 oc adm policy add-scc-to-user privileged -n istio-system -z istio-ingressgateway-service-account
 
-: "${ISTIO_RELEASE:=https://github.com/istio/istio/releases/download/1.16.0/istio-1.16.0-linux-amd64.tar.gz}"
+: "${ISTIO_RELEASE:=https://github.com/istio/istio/releases/download/$ISTIO_UPSTREAM_VERSION/istio-$ISTIO_UPSTREAM_VERSION-linux-amd64.tar.gz}"
 
 if [[ ! -x "$DOWNLOAD_DIR/bin/istioctl" ]]; then
     echo "Downloading and extracting $ISTIO_RELEASE"

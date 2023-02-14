@@ -80,6 +80,7 @@ if [[ "${ISTIO_OSSM}" != "true" ]]; then
   oc create -n gwapi serviceaccount istio-ingressgateway-service-account --dry-run=client -o yaml | oc apply -f -
   oc adm policy add-scc-to-user privileged -n gwapi -z istio-ingressgateway-service-account
   oc adm policy add-scc-to-group anyuid system:serviceaccounts:gwapi
+  oc adm policy add-scc-to-group anyuid system:serviceaccounts:auto # for auto deployment ns test
 fi
 
 GWAPI_SERVICE="gateway"
