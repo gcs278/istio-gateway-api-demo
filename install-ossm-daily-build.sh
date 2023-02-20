@@ -7,7 +7,13 @@ set -e
 # 3. Make sure /etc/krb5.conf has:
 #   [libdefaults]
 #      dns_canonicalize_hostname = fallback
-TOKEN_URL=https://employee-token-manager.registry.redhat.com/v1/tokens
+BASE_URL=employee-token-manager.registry.redhat.com
+TOKEN_URL=https://${BASE_URL}/v1/tokens
+if [[ $(dig +short "$BASE_URL") == "" ]]; then
+  echo "ERROR: You need to connect to the VPN"
+  exit 1
+fi
+
 if curl --negotiate -u : ${TOKEN_URL} -s | grep -qi "no authorization context provided"; then
   echo "No active kerberos ticket..."
   echo "Log into kerberos (should be your laptop password):"
@@ -54,8 +60,8 @@ spec:
     source: registry-proxy.engineering.redhat.com
 EOF
 
-# Get the latest daily pipeline build
-latest_build=$(brew list-builds --package=istio-rhel8-operator-metadata-container --owner=exd-cpaas-bot-prod  | tail -1 | awk '{print $1}')
+# Get the latest daily pipeline build, according to the highest version
+latest_build=$(brew list-builds --package=istio-rhel8-operator-metadata-container --owner=exd-cpaas-bot-prod | awk '{print $1}' | sort -h | tail -1)
 echo "Latest Build: $latest_build"
 
 url=$(curl -sS http://external-ci-coldstorage.datahub.redhat.com/cvp/cvp-redhat-operator-bundle-image-validation-test/${latest_build}/ | grep href | tail -1 | grep -io '<a href=['"'"'"][^"'"'"']*['"'"'"]' |   sed -e 's/^<a href=["'"'"']//i' -e 's/["'"'"']$//i')
@@ -86,7 +92,11 @@ spec:
   updateStrategy:
     registryPoll:
       interval: "30m"
----
+EOF
+
+# Install subscription and operator
+if [[ "$1" != "--nosub" ]]; then
+  oc apply -f - << EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -100,12 +110,13 @@ spec:
   sourceNamespace: openshift-marketplace
 EOF
 
-while ! oc get deployment -n openshift-operators istio-operator &> /dev/null; do
-  echo "Waiting for the istio-operator deployment to appear in openshift-operators namespace (this can take a long time)"
-  sleep 5
-done
+  while ! oc get deployment -n openshift-operators istio-operator &> /dev/null; do
+    echo "Waiting for the istio-operator deployment to appear in openshift-operators namespace (this can take a long time)"
+    sleep 5
+  done
 
-echo "Waiting for istio-operator deployment to rollout"
-oc rollout status -w deployment -n openshift-operators istio-operator
+  echo "Waiting for istio-operator deployment to rollout"
+  oc rollout status -w deployment -n openshift-operators istio-operator
+fi
 
 echo "Successfully installed the latest OSSM Daily Build!"
