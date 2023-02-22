@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nginx-pass
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
   labels:
     app: nginx-ssl
     service: nginx-pass
@@ -18,7 +18,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TLSRoute
 metadata:
   name: passthrough
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
 spec:
   parentRefs:
   - name: gateway

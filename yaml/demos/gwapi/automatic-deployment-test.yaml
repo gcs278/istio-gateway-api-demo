@@ -1,3 +1,4 @@
+# Auto deploy Outside SMCP Namespace
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -11,7 +12,7 @@ metadata:
 spec:
   selector:
     istio: openshift-gateway # use Istio default gateway implementation
-  gatewayClassName: istio
+  gatewayClassName: openshift-gateway
   listeners:
   - name: auto
     hostname: "auto.gateway-auto.auto.fake.com"
@@ -83,4 +84,33 @@ spec:
         ports:
         - containerPort: 8080
 ---
-
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway-auto
+  namespace: ${GWAPI_NS}
+spec:
+  gatewayClassName: openshift-gateway
+  listeners:
+  - name: auto
+    hostname: "auto-smcp-ns.gateway-auto.${GWAPI_NS}.fake.com"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: http-auto
+  namespace: ${GWAPI_NS}
+spec:
+  parentRefs:
+  - name: gateway-auto
+    namespace: ${GWAPI_NS}
+  hostnames: ["auto-smcp-ns.gateway-auto.${GWAPI_NS}.fake.com"]
+  rules:
+  - backendRefs:
+    - name: nginx
+      port: 8000

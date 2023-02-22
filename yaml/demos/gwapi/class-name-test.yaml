@@ -9,7 +9,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: gateway-class-name-test
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
 spec:
   selector:
     istio: openshift-gateway # use Istio default gateway implementation
@@ -28,11 +28,11 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
   name: gateway-class-name-test
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
 spec:
   parentRefs:
   - name: gateway-class-name-test
-    namespace: gwapi
+    namespace: ${GWAPI_NS}
   hostnames: ["invalid.gateway-class-name-test.gwapi.fake.com"]
   rules:
   - backendRefs:

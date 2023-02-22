@@ -17,3 +17,5 @@ oc delete ns istioapi
 oc delete ns auto
 oc delete ns scope
 oc delete ns bookinfo
+
+oc delete gatewayclasses.gateway.networking.k8s.io --all

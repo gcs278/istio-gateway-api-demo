@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
   - name: bookinfo-gateway
-    namespace: gwapi
+    namespace: ${GWAPI_NS}
   hostnames: ["book.${GWAPI_DOMAIN}"]
   rules:
   - matches:

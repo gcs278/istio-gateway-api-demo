@@ -2,7 +2,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
   name: http
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
 spec:
   parentRefs:
   - name: gateway

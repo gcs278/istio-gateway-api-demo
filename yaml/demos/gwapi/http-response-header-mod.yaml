@@ -4,7 +4,7 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: http-response-header-mod
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
 spec:
   hosts: ["http-response.hf.${GWAPI_DOMAIN}"]
   gateways:

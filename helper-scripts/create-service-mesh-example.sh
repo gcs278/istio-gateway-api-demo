@@ -23,7 +23,7 @@ addresses:
     type: Hostname
 END
 )
-cat ${SERVICE_MESH_YAML}/bookinfo-gateway.yaml | envsubst | oc apply -n gwapi -f -
+cat ${SERVICE_MESH_YAML}/bookinfo-gateway.yaml | envsubst | oc apply -f -
 
 # Create a httproute to route from Ingress Gateway into Mesh
 cat ${SERVICE_MESH_YAML}/bookinfo-httproute.yaml | envsubst | oc apply -f -

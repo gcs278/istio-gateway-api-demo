@@ -26,7 +26,7 @@ spec:
       service:
         type: LoadBalancer
       enabled: true
-      ingress: true
+      #ingress: true
   addons:
     grafana:
       enabled: false

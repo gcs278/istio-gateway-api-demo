@@ -3,17 +3,17 @@ kind: GatewayClass
 metadata:
   name: openshift-gateway
 spec:
-  controllerName: "openshift.io/not-gateway-controller"
+  controllerName: "openshift.io/gateway-controller"
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: gateway
-  namespace: gwapi
+  namespace: ${GWAPI_NS}
 spec:
-  selector:
-    istio: openshift-gateway # use Istio default gateway implementation
-  gatewayClassName: istio
+  #selector:
+  #  istio: openshift-gateway # use Istio default gateway implementation
+  gatewayClassName: openshift-gateway
   ${GW_ADDRESSES_YAML}
   listeners:
   - name: http
@@ -92,4 +92,4 @@ apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
   name: istio-cni
-  namespace: gwapi
+  namespace: ${GWAPI_NS}

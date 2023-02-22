@@ -13,7 +13,7 @@ metadata:
 spec:
   parentRefs:
   - name: gateway
-    namespace: gwapi
+    namespace: ${GWAPI_NS}
   hostnames: ["scope.${GWAPI_DOMAIN}"]
   rules:
   - backendRefs:

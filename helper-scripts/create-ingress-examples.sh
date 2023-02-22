@@ -6,6 +6,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && 
 YAML_DIR=${SCRIPT_DIR}/../yaml
 DEMO_YAML_DIR=${SCRIPT_DIR}/../yaml/demos
 CERT_DIR=/tmp/istio-certs
+GWAPI_NS=${GWAPI_NS-"gwapi"}
 mkdir -p $CERT_DIR
 
 function create_certs() {
@@ -84,7 +85,6 @@ if [[ "${ISTIO_OSSM}" != "true" ]]; then
 fi
 
 GWAPI_SERVICE="gateway"
-GWAPI_SERVICE_NAMESPACE="gwapi"
 : "${GW_ADDRESSES_YAML:=""}"
 if [[ "${GW_MANUAL_DEPLOYMENT}" == "true" ]]; then
   echo "GW_MANUAL_DEPLOYMENT is set. Using manual deployment for GWAPI"
@@ -109,7 +109,7 @@ END
   GWAPI_SERVICE="gateway-manual"
   export GW_ADDRESSES_YAML=$(cat <<-END
 addresses:
-  - value: gateway-manual.gwapi.svc.cluster.local
+  - value: gateway-manual.${GWAPI_NS}.svc.cluster.local
     type: Hostname
 END
 )
@@ -119,13 +119,12 @@ if [[ "${ISTIO_OSSM}" == "true" ]] && [[ "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYM
   # This points the demo Gateway Object to use the default istiod created deployment
   export GW_ADDRESSES_YAML=$(cat <<-END
 addresses:
-  - value: istio-ingressgateway.gwapi.svc.cluster.local
+  - value: istio-ingressgateway.${GWAPI_NS}.svc.cluster.local
     type: Hostname
 END
 )
   # This is for the DNS Records to point to our Default Envoy Deployment Service
   GWAPI_SERVICE="istio-ingressgateway"
-  GWAPI_SERVICE_NAMESPACE="gwapi"
 fi
 
 # Set up certs
@@ -140,9 +139,9 @@ if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
 fi
 
 # Gateway API Certs
-create_certs edge "edge.${GWAPI_DOMAIN}" gwapi
-create_certs re "re.${GWAPI_DOMAIN}" gwapi
-create_certs pass "pass.${GWAPI_DOMAIN}" gwapi
+create_certs edge "edge.${GWAPI_DOMAIN}" $GWAPI_NS
+create_certs re "re.${GWAPI_DOMAIN}" $GWAPI_NS
+create_certs pass "pass.${GWAPI_DOMAIN}" $GWAPI_NS
 
 # Configure istioapi examples via istio api
 if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
@@ -158,12 +157,14 @@ if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
   done
 fi
 
+export REFERENCE_GRANT_API_VERSION=$(oc get crd referencegrants.gateway.networking.k8s.io -o jsonpath='{.spec.versions[0].name}')
+
 # Set up nginx server for gwapi example
-oc apply -n gwapi -f ${DEMO_YAML_DIR}/nginx-deployments.yaml
+oc apply -n ${GWAPI_NS} -f ${DEMO_YAML_DIR}/nginx-deployments.yaml
 
 # Install all GWAPI Demos
 # TODO: Convert to templates kustomize
-for yaml in $(find ${DEMO_YAML_DIR}/gwapi -mindepth 1 -iname "*.y*ml"); do
+for yaml in $(find ${DEMO_YAML_DIR}/gwapi -mindepth 1 -maxdepth 1 -iname "*.y*ml"); do
   cat ${yaml} | envsubst | oc apply -f -
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Something went wrong with configuring ${yaml}"
@@ -171,14 +172,25 @@ for yaml in $(find ${DEMO_YAML_DIR}/gwapi -mindepth 1 -iname "*.y*ml"); do
   fi
 done
 
+# Install all GWAPI Demos that are EXPERIMENTAL
+if [[ "${ISTIO_INGRESS_OPERATOR=}" != "true" ]]; then
+  for yaml in $(find ${DEMO_YAML_DIR}/gwapi/experimental -mindepth 1 -maxdepth 1 -iname "*.y*ml"); do
+    cat ${yaml} | envsubst | oc apply -f -
+    if [[ $? -ne 0 ]]; then
+      echo "ERROR: Something went wrong with configuring ${yaml}"
+      exit 1
+    fi
+  done
+fi
+
 if [[ "$ISTIO_BM" != "true" ]]; then
   : "${GWAPI_LOADBALANCER_DOMAIN:=""}"
   : "${GWAPI_LOADBALANCER_IP:=""}"
   TIMEOUT=60
   while [[ "$GWAPI_LOADBALANCER_DOMAIN" == "" ]] && [[ "$GWAPI_LOADBALANCER_IP" == "" ]]; do
     # For AWS, it uses hostname, but for GCE, it uses IP
-    GWAPI_LOADBALANCER_DOMAIN=$(oc -n $GWAPI_SERVICE_NAMESPACE get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-    GWAPI_LOADBALANCER_IP=$(oc -n $GWAPI_SERVICE_NAMESPACE get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    GWAPI_LOADBALANCER_DOMAIN=$(oc -n $GWAPI_NS get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+    GWAPI_LOADBALANCER_IP=$(oc -n $GWAPI_NS get service $GWAPI_SERVICE -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     echo "Waiting for gateway api loadbalancer to get domain name"
     if [[ "$TIMEOUT" -lt 0 ]]; then
       echo "ERROR: Gateway API loadbalancer never got domain name"
