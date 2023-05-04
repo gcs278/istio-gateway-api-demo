@@ -2,6 +2,9 @@
 
 set -e
 
+# echo an error message before exiting
+trap 'test $? -ne 0 && echo "ERROR: Script failed with exit code $?."' EXIT
+
 # 1. Must be connected to the VPN
 # 2. Need the command "brew", not sure where I got this from originally...
 # 3. Make sure /etc/krb5.conf has:
@@ -60,13 +63,25 @@ spec:
     source: registry-proxy.engineering.redhat.com
 EOF
 
-# Get the latest daily pipeline build, according to the highest version
-latest_build=$(brew list-builds --package=istio-rhel8-operator-metadata-container --owner=exd-cpaas-bot-prod | awk '{print $1}' | sort -h | tail -1)
-echo "Latest Build: $latest_build"
+if [ -z ${TARGET_OSSM_BUILD+x} ]; then
+  # Get the latest daily pipeline build, according to the highest version
+  latest_build=$(brew list-builds --package=istio-rhel8-operator-metadata-container --owner=exd-cpaas-bot-prod | awk '{print $1}' | sort -h | tail -1)
+  echo "Latest Build: $latest_build"
+  TARGET_OSSM_BUILD=${latest_build}
+fi
 
-url=$(curl -sS http://external-ci-coldstorage.datahub.redhat.com/cvp/cvp-redhat-operator-bundle-image-validation-test/${latest_build}/ | grep href | tail -1 | grep -io '<a href=['"'"'"][^"'"'"']*['"'"'"]' |   sed -e 's/^<a href=["'"'"']//i' -e 's/["'"'"']$//i')
+url=$(curl -sS http://external-ci-coldstorage.datahub.redhat.com/cvp/cvp-redhat-operator-bundle-image-validation-test/${TARGET_OSSM_BUILD}/ | grep href | tail -1 | grep -io '<a href=['"'"'"][^"'"'"']*['"'"'"]' |   sed -e 's/^<a href=["'"'"']//i' -e 's/["'"'"']$//i')
 
-cvpTestReport=$(curl -sS ${url}cvp-test-report.html)
+cvpTestReportFile="cvp-test-report"
+fileList=$(curl -sS ${url})
+if ! echo "$fileList" | grep -q "$cvpTestReportFile"; then
+  echo "ERROR: Build $TARGET_OSSM_BUILD doesn't have ${url}${cvpTestReportFile}.html"
+  echo "       Try setting TARGET_OSSM_BUILD to a specific OSSM build version"
+  echo "       Versions can be found here: https://brewweb.engineering.redhat.com/brew/packageinfo?packageID=74330"
+  exit 1
+fi
+
+cvpTestReport=$(curl -sS "${url}${cvpTestReportFile}.html")
 indexImage=$( echo "$cvpTestReport" | grep -i "Index image v4." | tail -1)
 image=$(echo "$indexImage" | awk '{print $5}')
 image=${image%<\/div>}
