@@ -8,6 +8,7 @@ set -a
 : "${ISTIO_HOST_NETWORKING:=false}"
 : "${ISTIO_BM:=false}"
 : "${ISTIO_CONVERT_CONSOLE:=false}"
+: "${ISTIO_INGRESS_OPERATOR:=false}"
 : "${ISTIO_OSSM:=true}"
 : "${ISTIO_OSSM_DAILY_BUILD:=false}"
 : "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT:=true}"
@@ -54,10 +55,17 @@ read -p "Press enter to continue the installation"
 HELPER="./helper-scripts"
 
 # Install GW API CRDs
-${HELPER}/install-gwapi.sh
+if [[ "${ISTIO_INGRESS_OPERATOR=}" != "true" ]]; then
+  ${HELPER}/install-gwapi.sh
+fi
 
+export GWAPI_NS="gwapi"
 # Install Istio via istioctl
-if [[ "${ISTIO_OSSM=}" == "true" ]]; then
+if [[ "${ISTIO_INGRESS_OPERATOR=}" == "true" ]]; then
+  echo "Configuring Gateway API via cluster-ingress-operator"
+  ${HELPER}/configure-ingress-operator-gwapi.sh
+  export GWAPI_NS="openshift-ingress"
+elif [[ "${ISTIO_OSSM=}" == "true" ]]; then
   if [[ "${ISTIO_OSSM_DAILY_BUILD}" == "true" ]]; then
      echo "Installing OSSM Daily build, follow the prompts below:"
     ./install-ossm-daily-build.sh

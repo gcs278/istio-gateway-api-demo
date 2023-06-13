@@ -1,0 +1,121 @@
+# TODO Prior #
+  - Run ./install-ossm-daily-build.sh because it takes like 5 minutes
+  - Patch ingress-operator with https://github.com/openshift/cluster-ingress-operator/pull/901
+    - quay.io/gspence/cluster-ingress-operator:gwapi-fix
+
+## Extra Steps Because OSSM 2.4 is NOT Ready  ##
+1. Install the OSSM 2.4 Daily Build:
+
+  ./install-ossm-daily-build.sh
+ 
+  # Show istio operator running
+  oc get pods -n openshift-operators
+
+2. Replace the CSV to enable upstream proxy images to be used (makes auto-deployments work):
+
+  oc replace -f csv-upstream-2.4.0.yaml
+  # - or -
+  oc -n openshift-operators patch csv/servicemeshoperator.v2.4.0 --type=json --patch='[{"op":"replace","path":"/spec/install/spec/deployments/0/spec/template/metadata/annotations/olm.relatedImage.v2_4.proxyv2","value":"quay.io/maistra-dev/proxyv2-ubi8:2.4-latest"}]'
+
+## Standard Setup ##
+
+1. Enable the feature gate:
+    
+    oc get featuregates.config.openshift.io -o yaml
+
+    oc patch featuregates/cluster --type=merge --patch='{"spec":{"featureSet":"CustomNoUpgrade","customNoUpgrade":{"enabled":["GatewayAPI"]}}}'
+    
+    oc get crd gatewayclasses.gateway.networking.k8s.io
+
+2. Give the Ingress Operator cluster-admin permission:
+
+    oc adm policy add-cluster-role-to-user cluster-admin -z ingress-operator -n openshift-ingress-operator
+
+3. Create a gatewayclass:
+
+    oc create -f -<<'EOF'
+    apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: GatewayClass
+    metadata:
+      name: openshift-default
+    spec:
+      controllerName: openshift.io/gateway-controller
+EOF
+
+    # Show istiod and istio-ingressgateway pods
+    oc get pods -n openshift-ingress
+
+4. Create a wildcard certificate and secret:
+
+    base_domain="$(oc get dnses.config/cluster -o jsonpath='{.spec.baseDomain}')"
+    gwapi_domain="gwapi.${base_domain}"
+    openssl req -x509 -newkey rsa:4096 -sha256 -days 365 -keyout /tmp/gwapi/ca.key -out /tmp/gwapi/ca.crt -nodes -subj '/C=US/ST=NC/L=Chocowinity/O=OS3/OU=Eng/CN=gwapi-ca' && openssl req -newkey rsa:4096 -nodes -sha256 -keyout /tmp/gwapi/wildcard.key -out /tmp/gwapi/wildcard.csr -subj "/C=US/ST=NC/L=Chocowinity/O=OS3/OU=Eng/CN=*.$gwapi_domain" && openssl x509 -req -days 365 -in /tmp/gwapi/wildcard.csr -signkey /tmp/gwapi/wildcard.key -CA /tmp/gwapi/ca.crt -CAcreateserial -CAkey /tmp/gwapi/ca.key -out /tmp/gwapi/wildcard.crt
+    oc -n openshift-ingress create secret tls gwapi-wildcard --cert=/tmp/gwapi/wildcard.crt --key=/tmp/gwapi/wildcard.key
+
+5. Create a gateway:
+
+    oc create -f - <<EOF
+    apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      name: gateway
+      namespace: openshift-ingress
+    spec:
+      gatewayClassName: openshift-default
+      listeners:
+      - name: http
+        hostname: "*.$gwapi_domain"
+        port: 80
+        protocol: HTTP
+        allowedRoutes:
+          namespaces:
+            from: All
+      - name: https
+        hostname: "*.$gwapi_domain"
+        port: 443
+        protocol: HTTPS
+        tls:
+          mode: Terminate
+          certificateRefs:
+          - name: gwapi-wildcard
+        allowedRoutes:
+          namespaces:
+            from: All
+EOF
+
+    # show auto deployed gateway pod
+    oc get pods -n openshift-ingress
+
+    # show audo deployed service
+    oc get svc -n openshift-ingress gateway
+
+    # show the dns record created
+    oc get dnsrecords.ingress.operator.openshift.io -n openshift-ingress
+
+5. Create a demo application:
+
+    oc new-project demo-app
+    oc new-app -n demo-app --name foo-app https://github.com/openshiftdemos/cakephp-ingress-demo\#foo
+
+6. Create an httproute:
+
+    oc apply -f - <<EOF
+    apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: HTTPRoute
+    metadata:
+      name: http
+      namespace: demo-app
+    spec:
+      parentRefs:
+      - name: gateway
+        namespace: openshift-ingress
+      hostnames: ["test.$gwapi_domain"]
+      rules:
+      - backendRefs:
+        - name: foo-app
+          port: 8080
+EOF
+
+7. Curl the application:
+
+    curl --cacert /tmp/gwapi/ca.crt "https://test.$gwapi_domain/"
