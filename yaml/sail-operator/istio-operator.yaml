@@ -1,0 +1,30 @@
+apiVersion: operator.istio.io/v1alpha1
+kind: Istio
+metadata:
+  labels:
+    app.kubernetes.io/created-by: sailoperator
+    app.kubernetes.io/instance: istio-gwapi
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: istio
+    app.kubernetes.io/part-of: sailoperator
+  name: istio-gwapi
+  namespace: gwapi
+spec:
+  values:
+    cni:
+      chained: false
+      cniBinDir: /var/lib/cni/bin
+      cniConfDir: /etc/cni/multus/net.d
+      cniConfFileName: istio-cni.conf
+      excludeNamespaces:
+        - istio-system
+        - kube-system
+      logLevel: info
+      privileged: true
+      provider: multus
+    global:
+      platform: openshift
+    istio_cni:
+      chained: false
+      enabled: true
+  version: v3.0

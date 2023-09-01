@@ -1,0 +1,14 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  labels:
+    operators.coreos.com/sailoperator.openshift-operators: ""
+  name: sailoperator
+  namespace: openshift-operators
+spec:
+  channel: 3.0-nightly
+  installPlanApproval: Automatic
+  name: sailoperator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  #startingCSV: sailoperator.v3.0.0-nightly-2023-09-01

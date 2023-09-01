@@ -4,13 +4,11 @@ set -eu
 
 # ENV Defaults
 set -a
+: "${ISTIO_SOURCE:=OSSM_V2}"
 : "${ISTIO_API_DEMO:=false}"
 : "${ISTIO_HOST_NETWORKING:=false}"
 : "${ISTIO_BM:=false}"
 : "${ISTIO_CONVERT_CONSOLE:=false}"
-: "${ISTIO_INGRESS_OPERATOR:=false}"
-: "${ISTIO_OSSM:=true}"
-: "${ISTIO_OSSM_DAILY_BUILD:=false}"
 : "${ISTIO_OSSM_USE_DEFAULT_ENVOY_DEPLOYMENT:=true}"
 : "${ISTIO_OSSM_SERVICE_MESH_EXAMPLE:=true}"
 : "${GW_MANUAL_DEPLOYMENT:=false}"
@@ -18,12 +16,16 @@ set -a
 : "${ISTIO_UPSTREAM_VERSION:=1.16.2}"
 set +a
 
+
 echo "Environment Variables:"
 for var in $(compgen -v); do
   if echo $var | grep -q 'ISTIO_\|GW_'; then
     echo " --> ${var}=${!var}"
   fi
 done
+
+echo
+echo "ISTIO_SOURCE can be UPSTREAM, OSSM_V2, OSSM_DAILY, INGRESS_OPERATOR (tech preview), SAIL_OPERATOR (dev preview)."
 
 # Validation
 if [[ "${GW_HOST_NETWORKING}" == "true" ]] && [[ "${GW_MANUAL_DEPLOYMENT}" == "false" ]]; then
@@ -59,21 +61,30 @@ if [[ "${ISTIO_INGRESS_OPERATOR=}" != "true" ]]; then
   ${HELPER}/install-gwapi.sh
 fi
 
+if [[ "$ISTIO_SOURCE" =~ OSSM* ]]; then
+  export ISTIO_OSSM=true
+else
+  export ISTIO_OSSM=false
+fi
+
 export GWAPI_NS="gwapi"
 # Install Istio via istioctl
-if [[ "${ISTIO_INGRESS_OPERATOR=}" == "true" ]]; then
+if [[ "${ISTIO_SOURCE=}" == "INGRESS_OPERATOR" ]]; then
   echo "Configuring Gateway API via cluster-ingress-operator"
   ${HELPER}/configure-ingress-operator-gwapi.sh
   export GWAPI_NS="openshift-ingress"
-elif [[ "${ISTIO_OSSM=}" == "true" ]]; then
-  if [[ "${ISTIO_OSSM_DAILY_BUILD}" == "true" ]]; then
-     echo "Installing OSSM Daily build, follow the prompts below:"
-    ./install-ossm-daily-build.sh
-  else
-    ${HELPER}/install-service-mesh-operator.sh
-  fi
+elif [[ "${ISTIO_SOURCE=}" == "OSSM_V2" ]]; then
+  echo "Installing OSSM v2"
+  ${HELPER}/install-service-mesh-operator.sh
   ${HELPER}/configure-service-mesh.sh
-else
+elif [[ "${ISTIO_SOURCE=}" == "OSSM_DAILY" ]]; then
+  echo "Installing OSSM Daily build, follow the prompts below:"
+  ./install-ossm-daily-build.sh
+  ${HELPER}/configure-service-mesh.sh
+elif [[ "${ISTIO_SOURCE=}" == "SAIL_OPERATOR" ]]; then
+  ${HELPER}/install-sail-operator.sh
+  ${HELPER}/configure-sail-operator.sh
+elif [[ "${ISTIO_SOURCE=}" == "UPSTREAM" ]]; then
   ${HELPER}/install-istio.sh
 fi
 
@@ -85,7 +96,7 @@ ${HELPER}/create-ingress-examples.sh "$@"
 
 # Configure service mesh examples
 if [[ "${ISTIO_OSSM_SERVICE_MESH_EXAMPLE:=}" == "true" && "${ISTIO_OSSM:=}" == "true" ]]; then
-   ${HELPER}/create-service-mesh-example.sh 
+  ${HELPER}/create-service-mesh-example.sh 
 fi
 
 if [[ "${ISTIO_BM:=}" != "true" ]] && [[ "${ISTIO_CONVERT_CONSOLE:=}" == "true" ]]; then

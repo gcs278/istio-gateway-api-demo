@@ -3,7 +3,7 @@ kind: GatewayClass
 metadata:
   name: openshift-gateway
 spec:
-  controllerName: "openshift.io/gateway-controller"
+  controllerName: "${GATEWAY_CONTROLLER_NAME}"
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway

@@ -158,6 +158,11 @@ if [[ "${ISTIO_API_DEMO}" == "true" ]]; then
 fi
 
 export REFERENCE_GRANT_API_VERSION=$(oc get crd referencegrants.gateway.networking.k8s.io -o jsonpath='{.spec.versions[0].name}')
+export GATEWAY_CONTROLLER_NAME="openshift.io/gateway-controller"
+if [[ "$ISTIO_SOURCE" == "SAIL_OPERATOR" ]]; then
+  # Sail operator doesn't support changing gateway controller name yet
+  GATEWAY_CONTROLLER_NAME="istio.io/gateway-controller"
+fi
 
 # Set up nginx server for gwapi example
 oc apply -n ${GWAPI_NS} -f ${DEMO_YAML_DIR}/nginx-deployments.yaml
